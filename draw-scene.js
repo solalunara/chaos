@@ -60,7 +60,7 @@ function drawScene(gl, programInfo, buffers) {
   );
 
   {
-    const vertexCount = 4;
+    const vertexCount = 6;
     const type = gl.UNSIGNED_SHORT;
     const offset = 0;
     gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
