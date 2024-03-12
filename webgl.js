@@ -4,17 +4,28 @@ import { drawScene } from "./draw-scene.js";
 // Vertex shader program
 const vsSource = `
     attribute vec4 aVertexPosition;
+    attribute vec4 aVertexColor;
+
     uniform mat4 uModelViewMatrix;
     uniform mat4 uProjectionMatrix;
-    void main() {
-    gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+
+    varying lowp vec4 vColor;
+
+    void main(void) {
+      gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+      vColor = aVertexColor;
     }
-`;
+  `;
+
+// Fragment shader program
 const fsSource = `
-    void main() {
-    gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+    varying lowp vec4 vColor;
+
+    void main(void) {
+      gl_FragColor = vColor;
     }
-`;
+  `;
+
 
 function initShaderProgram(gl, vsSource, fsSource) {
     const vertexShader = loadShader(gl, gl.VERTEX_SHADER, vsSource);
@@ -93,6 +104,7 @@ const phaseProgramInfo = {
     program: phaseShaderProgram,
     attribLocations: {
         vertexPosition: gl_phase.getAttribLocation(phaseShaderProgram, "aVertexPosition"),
+        vertexColor: gl_phase.getAttribLocation(phaseShaderProgram, "aVertexColor"),
     },
     uniformLocations: {
         projectionMatrix: gl_phase.getUniformLocation(phaseShaderProgram, "uProjectionMatrix"),
@@ -103,6 +115,7 @@ const realProgramInfo = {
     program: realShaderProgram,
     attribLocations: {
         vertexPosition: gl_real.getAttribLocation(realShaderProgram, "aVertexPosition"),
+        vertexColor: gl_real.getAttribLocation(realShaderProgram, "aVertexColor"),
     },
     uniformLocations: {
         projectionMatrix: gl_real.getUniformLocation(realShaderProgram, "uProjectionMatrix"),
