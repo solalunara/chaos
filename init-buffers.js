@@ -111,7 +111,7 @@ function initIndexBuffer(gl) {
     0,
     1,
     2,
-    0,
+    1,
     2,
     3,
   ];
