@@ -16,7 +16,7 @@ def plot_multiple_lines(xdata, ydata):
     plt.show()
 
 def TimeDerivative( x ):
-    return np.cos( x );
+    return np.tan( x );
 
 def Iterate( init_cond, N, dt, X ):
     f = np.zeros( (N,X) );
@@ -28,7 +28,7 @@ def Iterate( init_cond, N, dt, X ):
 N = 100;
 dt = 0.1;
 X = 100;
-x = np.linspace( 9.9, 10.1, X );
+x = np.linspace( 0.01, 10.1, X );
 y = Iterate( x, N=N, dt=0.1, X=X );
 
 plot_multiple_lines( np.linspace( 0, N * dt, N ), y );
