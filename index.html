@@ -15,26 +15,24 @@
             margin: 0;
             display: block;
         }
-        .row {
-            display: table-row;
+        .graphs {
+            display: flex;
+            flex-direction: row;
+            flex: 3;
         }
         .panel {
-            width: calc( 50vw - 2px );
-            height: calc( 20vh - 2px );
+            flex: 1;
             border: 1px solid black;
             margin: 0;
-            display: table-cell
         }
-        .table {
-            display: table;
+        .container {
+            display: flex;
+            flex-direction: column;
             width: 100vw;
-            height: 80vh;
+            height: 100vh;
         }
         .data {
-            display: block;
-            width: calc( 100vw - 2px );
-            height: calc( 20vh - 2px );
-            border: 1px solid black;
+            flex: 1;
         }
     </style>
 
@@ -46,8 +44,8 @@
 </head>
 
 <body>
-    <div class="table">
-        <div class="row">
+    <div class="container">
+        <div class="graphs">
             <div class="panel" id="phasespace">
                 <canvas id="phaseCanvas" width="100" height="100"></canvas>
             </div>
@@ -55,8 +53,9 @@
                 <canvas id="realCanvas" width="100" height="100"></canvas>
             </div>
         </div>
+
+        <div class="data">
     </div>
-    <div class="data">
 
     </div>
 
