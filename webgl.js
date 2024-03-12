@@ -96,6 +96,12 @@ window.addEventListener('load', function() {
     realCanvas.width = realDiv.clientWidth;
     realCanvas.height = realDiv.clientHeight;
 
+    phaseCanvas.style.width = phaseDiv.clientWidth;
+    phaseCanvas.style.height = phaseDiv.clientHeight;
+    realCanvas.style.width = realDiv.clientWidth;
+    realCanvas.style.height = realDiv.clientHeight;
+
+
     if ( gl_phase === null || gl_real === null ) {
         alert( "Unable to initialize WebGL. Your browser or machine may not support it." );
     }
