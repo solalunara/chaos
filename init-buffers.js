@@ -1,8 +1,10 @@
 function initBuffers(gl) {
   const positionBuffer = initPositionBuffer(gl);
+  const colorBuffer = initColorBuffer(gl);
 
   return {
     position: positionBuffer,
+    color: colorBuffer,
   };
 }
 
@@ -22,12 +24,7 @@ function initPositionBuffer(gl) {
   // JavaScript array, then use it to fill the current buffer.
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
 
-  const colorBuffer = initColorBuffer(gl);
-
-  return {
-    position: positionBuffer,
-    color: colorBuffer,
-  };
+  return positionBuffer;
 }
 
 function initColorBuffer(gl) {
