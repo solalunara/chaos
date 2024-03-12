@@ -80,11 +80,19 @@ function loadShader(gl, type, source) {
     return shader;
 }
 
+const phaseDiv = document.querySelector( "#phasespace" );
+const realDiv = document.querySelector( "#realspace" );
+
 
 const phaseCanvas = document.querySelector( "#phaseCanvas" );
 const realCanvas = document.querySelector( "#realCanvas" );
 const gl_phase = phaseCanvas.getContext( "webgl" );
 const gl_real = realCanvas.getContext( "webgl" );
+
+phaseCanvas.width = phaseDiv.offsetWidth;
+phaseCanvas.height = phaseDiv.offsetHeight;
+realCanvas.width = realDiv.offsetWidth;
+realCanvas.height = realDiv.offsetHeight;
 
 if ( gl_phase === null || gl_real === null ) {
     alert( "Unable to initialize WebGL. Your browser or machine may not support it." );
