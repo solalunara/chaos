@@ -29,17 +29,6 @@ def plot_multiple_lines(xdata, ydata, title, xlabel, ylabel):
     ax.set_xlim([-20, 20])
     
 
-def TimeDerivative( x ):
-    return np.tan( x );
-
-def Iterate( init_cond, N, dt, X ):
-    f = np.zeros( (N,X) );
-    f[ 0 ] = init_cond;
-    for i in range( 1, N ):
-        f[ i ] = f[ i - 1 ] + TimeDerivative( f[ i - 1 ] ) * dt;
-    return f;
-
-
 N = 5000;
 dt = 0.1;
 X = 10;
