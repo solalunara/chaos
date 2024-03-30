@@ -30,7 +30,7 @@ def plot_multiple_lines(xdata, ydata, title, xlabel, ylabel):
     
 
 def TimeDerivative( x ):
-    return np.log(1+np.cos(x));
+    return np.tan( x );
 
 def Iterate( init_cond, N, dt, X ):
     f = np.zeros( (N,X) );
