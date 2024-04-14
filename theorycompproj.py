@@ -1,44 +1,84 @@
 import matplotlib.pyplot as plt;
 import numpy as np;
-import matplotlib.animation as animation;
 from matplotlib.widgets import Button, Slider;
+from typing import Callable;
 
 
-lines = [];
-text = None;
-fig = None;
-ax = None;
-def plot_multiple_lines(xdata, ydata, title, xlabel, ylabel):
-    global fig, ax, lines, text;
-    fig, ax = plt.subplots( figsize=(10, 6) );
+def plot_multiple_datasets( xdata: np.ndarray, ydata: np.ndarray, ax: plt.Axes, plotfn: Callable, **kwargs ):
+    """graphs multiple datasets on the same plot
+
+    Args:
+        xdata (array, dim 1 or 2): EITHER a 1D array of x values for all graphs, OR a 2D array of x values for each graph (Point Index, Graph Index)
+        ydata (array, dim 1 or 2): EITHER a 1D array of y values for all graphs, OR a 2D array of y values for each graph (Point Index, Graph Index)
+        ax (plt.Axes): axis to plot the graphs on
+        plotfn (Callable): function to plot the data with (e.g. ax.plot, ax.scatter, etc.)
+        
+    Optional Args:
+        title (string): title of the plot
+        xlabel (string): label to show on the x axis
+        ylabel (string): label to show on the y axis
+        xmin (float): minimum value of x axis
+        xmax (float): maximum value of x axis
+        ymin (float): minimum value of y axis
+        ymax (float): maximum value of y axis
+
+    Raises:
+        ValueError: if x or y data has the wrong dimension
+        ValueError: if x and y data hold data for different numbers of graphs
+
+    Returns:
+        graphs: an array of the graphs that are plotted
+    """
+    title = kwargs.get( 'title', None );
+    xlabel = kwargs.get( 'xlabel', None );
+    ylabel = kwargs.get( 'ylabel', None );
+    xmin = kwargs.get( 'xmin', None );
+    xmax = kwargs.get( 'xmax', None );
+    ymin = kwargs.get( 'ymin', None );
+    ymax = kwargs.get( 'ymax', None );
+    
+    graphs = [];
     
     if ydata.ndim == 1:
-        if xdata.ndim == 1:
-            lines.append( None );
-            lines[ 0 ], = ax.plot(xdata, ydata)
-        elif xdata.ndim == 2:
-            for i in range(len(xdata[0])):
-                lines.append( None );
-                lines[ i ], = ax.plot(xdata[:,i], ydata)
-        else: raise ValueError("xdata must have dimension 1 or 2");
-    elif ydata.ndim == 2:
-        if xdata.ndim == 1:
-            for i in range(len(ydata[0])):
-                lines.append( None );
-                lines[ i ], = ax.plot(xdata, ydata[:,i])
-        elif xdata.ndim == 2:
-            for i in range(len(ydata[0])):
-                lines.append( None );
-                lines[ i ], = ax.plot(xdata[:,i], ydata[:,i])
-        else: raise ValueError("xdata must have dimension 1 or 2");
-    else: raise ValueError("ydata must have dimension 1 or 2");
+        ydata = ydata.reshape( (len(ydata), 1) );
+    elif ydata.ndim != 2: raise ValueError( "ydata must have dimension 1 or 2" );
     
-    ax.set_xlabel( xlabel );
-    ax.set_ylabel( ylabel );
-    ax.set_title( title );
-    ax.set_ylim( [0, 1000] );
-    ax.set_xlim( [0, 500] );
-    fig.subplots_adjust( left=0.25 );
+    if xdata.ndim == 1:
+        xdata = xdata.reshape( (len(xdata), 1) );
+    elif xdata.ndim != 2: raise ValueError( "xdata must have dimension 1 or 2" );
+    
+    if len( ydata[ 0 ] ) != len( xdata[ 0 ] ): 
+        if len( ydata[ 0 ] ) == 1:
+            ydata = np.repeat( ydata, len( xdata ), axis=1 );
+        elif len( xdata[ 0 ] ) == 1:
+            xdata = np.repeat( xdata, len( ydata ), axis=1 );
+        else: raise ValueError( "xdata and ydata must have the same length" );
+        
+    unpackable = True;
+    for i in range( len( ydata[ 0 ] ) ):
+        graphs.append( None );
+        collection = plotfn( xdata[ :, i ], ydata[ :, i ] );
+        if unpackable:
+            try:
+                graphs[ i ], = collection;
+            except TypeError:
+                unpackable = False;
+                graphs[ i ] = collection;
+        else:
+            graphs[ i ] = collection;
+        
+    
+    if title: ax.set_title( title );
+    if xlabel: ax.set_xlabel( xlabel );
+    if ylabel: ax.set_ylabel( ylabel );
+    
+    if xmin: ax.set_xlim( left=xmin );
+    if xmax: ax.set_xlim( right=xmax );
+    if ymin: ax.set_ylim( bottom=ymin );
+    if ymax: ax.set_ylim( top=ymax );
+    
+    return graphs;
+    
     
 def find_nearest( array, value ):
     array = np.asarray( array );
@@ -86,34 +126,52 @@ for i in range( 1, N ):
     angular_velocities[ i ] = angular_velocities[ i - 1 ] + ( k_1 + 2*k_2 + 2*k_3 + k_4 ) * dt/6;
     angles[ i ] = angles[ i - 1 ] + angular_velocities[ i ] * dt;
 
-diff = np.abs( np.diff( angles, axis=1 ) );
-    
-plot_multiple_lines( time, diff[ :, :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], f"pendulum plot for R={R}, b={b}, M={M}", 'time', 'difference' );
+lyapunov_diff = np.abs( np.diff( angles, axis=1 ) );
 
-axforce = fig.add_axes([0.15, 0.2, 0.0225, 0.63])
+poincare_x = angles[ :-1:, :, :, : ];
+poincare_y = angles[  1::, :, :, : ];
+poincare_diff = np.zeros( (2,N-1,X,F,W) );
+
+fig = plt.figure();
+gs = fig.add_gridspec(2, 3,  width_ratios=(1, 1, 10), height_ratios=(1, 1),
+                      left=0.05, right=0.95, bottom=0.05, top=0.95,
+                      wspace=0.45, hspace=0.45)
+ax_lines = fig.add_subplot( gs[0, 2] );
+ax_scatter = fig.add_subplot( gs[1, 2] );
+ax_force = fig.add_subplot( gs[:, 0] );
+ax_freq = fig.add_subplot( gs[:, 1] );
+
+lines = plot_multiple_datasets( time, lyapunov_diff[ :, :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], ax_lines, ax_lines.plot, title=f"difference plot for R={R}, b={b}, M={M}", xlabel='time', ylabel='difference', xmin=0, xmax=N*dt, ymin=0, ymax=100 );
+
+poincare_graphs = plot_multiple_datasets( poincare_x[ :, :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], poincare_y[ :, :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], ax_scatter, ax_scatter.scatter, title=f"poincare plot for R={R}, b={b}, M={M}", xlabel='x', ylabel='y', xmin=-np.pi, xmax=np.pi, ymin=-np.pi, ymax=np.pi);
+
 f_slider = Slider(
-    ax=axforce,
+    ax=ax_force,
     label="force amplitude",
     valmin=fmin,
     valmax=fmax,
     valinit=F_init,
     orientation="vertical"
-)
+);
 
-axfreq = fig.add_axes([0.05, 0.2, 0.0225, 0.63])
 w_slider = Slider(
-    ax=axfreq,
+    ax=ax_freq,
     label="frequency",
     valmin=wmin,
     valmax=wmax,
     valinit=W_init,
     orientation="vertical"
-)
+);
 
 def update(val):
+    f = f_slider.val;
+    w = w_slider.val;
     for i in range( X - 1 ):
-        lines[ i ].set_ydata( diff[ :, i, find_nearest( F_arr, f_slider.val ), find_nearest( W_arr, w_slider.val ) ] );
+        lines[ i ].set_ydata( lyapunov_diff[ :, i, find_nearest( F_arr, f ), find_nearest( W_arr, w ) ] );
+    for i in range( X ):
+        poincare_graphs[ i ].set_offsets( np.column_stack( (poincare_x[ :, i, find_nearest( F_arr, f ), find_nearest( W_arr, w ) ], poincare_y[ :, i, find_nearest( F_arr, f ), find_nearest( W_arr, w ) ]) ) );
     fig.canvas.draw_idle();
+
 f_slider.on_changed(update);
 w_slider.on_changed(update);
 
