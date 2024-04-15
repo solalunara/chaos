@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt;
 import numpy as np;
 from matplotlib.widgets import Button, Slider;
 from typing import Callable;
+import matplotlib.animation as animation;
 
 
 def plot_multiple_datasets( xdata: np.ndarray, ydata: np.ndarray, ax: plt.Axes, plotfn: Callable, **kwargs ):
@@ -72,6 +73,7 @@ def plot_multiple_datasets( xdata: np.ndarray, ydata: np.ndarray, ax: plt.Axes, 
     if xlabel: ax.set_xlabel( xlabel );
     if ylabel: ax.set_ylabel( ylabel );
     
+    #float value of zero is False, so we need to check if the value is None
     if xmin is not None: ax.set_xlim( xmin=xmin );
     if xmax is not None: ax.set_xlim( xmax=xmax );
     if ymin is not None: ax.set_ylim( ymin=ymin );
@@ -85,17 +87,22 @@ def find_nearest( array, value ):
     idx = (np.abs( array - value )).argmin();
     return idx;
 
-N = 5000; # number of time steps
+N = 3000; # number of time steps
 dt = 0.1; # time step
-X = 10;   # number of pendulums to simulate
-F = 50;  # number of forces to simulate, also acts as the number of frames in the animation
-W = 50;  # number of angular velocities to simulate
+A = 8;   # number of initial angles
+B = 8;   # number of initial angular velocities
+X = A*B;  # number of pendulums to simulate
+F = 30;   # number of forces to simulate, also acts as the number of frames in the animation
+W = 30;   # number of angular velocities to simulate
 fmin = 0;
 fmax = 3;
 wmin = 0;
 wmax = 3;
-initial_angles = np.linspace( -0.001, 0.001, X ) + 0.5;
-initial_angular_velocities = np.array( [ 0 for _ in range( X ) ] );
+initial_angles = np.linspace( -0.001, 0.001, A ) + 0.5;
+initial_angular_velocities = np.linspace( -0.001, 0.001, B );
+
+initial_angles_mesh = np.repeat( initial_angles, B );
+initial_angular_velocities_mesh = np.resize( initial_angular_velocities, X )
 
 
 g = 9.81;
@@ -106,6 +113,7 @@ F_arr = np.reshape( np.linspace( fmin, fmax, F ), (1,F,1) );
 W_arr = np.reshape( np.linspace( wmin, wmax, W ), (1,1,W) );
 F_init = 0.5;
 W_init = 0.5;
+T_init = 0;
 
 
 def Acceleration( time, angle, angular_velocity, F, w ):
@@ -115,8 +123,8 @@ def Acceleration( time, angle, angular_velocity, F, w ):
 time = np.linspace( 0, N * dt, N );
 angles = np.zeros( (N,X,F,W) );
 angular_velocities = np.zeros( (N,X,F,W) );
-angles[ 0, :, :, : ] = initial_angles[ :, None, None ];
-angular_velocities[ 0, :, :, : ] = initial_angular_velocities[ :, None, None ];
+angles[ 0, :, :, : ] = initial_angles_mesh[ :, None, None ];
+angular_velocities[ 0, :, :, : ] = initial_angular_velocities_mesh[ :, None, None ];
 
 for i in range( 1, N ):
     k_1 = Acceleration( time[ i - 1 ], angles[ i - 1 ], angular_velocities[ i - 1 ], F_arr, W_arr );
@@ -131,18 +139,20 @@ lyapunov_diff = np.average( np.abs( np.diff( angles, axis=1 ) ), axis=1 );
 poincare_x = angles[ :-1:, :, :, : ];
 poincare_y = angles[  1::, :, :, : ];
 
-fig = plt.figure();
-gs = fig.add_gridspec(2, 3,  width_ratios=(1, 1, 10), height_ratios=(1, 1),
+fig = plt.figure( figsize=(12, 8) );
+gs = fig.add_gridspec(2, 4,  width_ratios=(1, 1, 10, 10), height_ratios=(1, 1),
                       left=0.05, right=0.95, bottom=0.05, top=0.95,
                       wspace=0.45, hspace=0.45)
-ax_lines = fig.add_subplot( gs[0, 2] );
-ax_scatter = fig.add_subplot( gs[1, 2] );
-ax_force = fig.add_subplot( gs[:, 0] );
-ax_freq = fig.add_subplot( gs[:, 1] );
+ax_lines = fig.add_subplot( gs[ 0, 2 ] );
+ax_scatter = fig.add_subplot( gs[ 1, 2 ] );
+ax_force = fig.add_subplot( gs[ :, 0 ] );
+ax_freq = fig.add_subplot( gs[ :, 1 ] );
+ax_phase = fig.add_subplot( gs[ :, 3 ] );
 
 lines = plot_multiple_datasets( time, lyapunov_diff[ :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], ax_lines, ax_lines.plot, title=f"difference plot for R={R}, b={b}, M={M}", xlabel='time', ylabel='difference', xmin=0, xmax=N*dt, ymin=0, ymax=2*np.pi );
-
 poincare_graphs = plot_multiple_datasets( poincare_x[ :, :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], poincare_y[ :, :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], ax_scatter, ax_scatter.scatter, title=f"poincare plot for R={R}, b={b}, M={M}", xlabel='x', ylabel='y', xmin=-np.pi, xmax=np.pi, ymin=-np.pi, ymax=np.pi );
+phase_space_graphs = plot_multiple_datasets( angles[ find_nearest( time, T_init ), :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], angular_velocities[ find_nearest( time, T_init ), :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], ax_phase, ax_phase.scatter, title=f"phase space plot for R={R}, b={b}, M={M}", xlabel='angle', ylabel='angular velocity', xmin=-np.pi, xmax=np.pi, ymin=-4, ymax=4 );
+text = ax_phase.text( 0, 3.5, f"t: {0}", fontsize=12 );
 
 f_slider = Slider(
     ax=ax_force,
@@ -162,17 +172,33 @@ w_slider = Slider(
     orientation="vertical"
 );
 
-def update(val):
+def update( val ):
+    global t;
     f = f_slider.val;
     w = w_slider.val;
+    t = 0;
     lines[ 0 ].set_ydata( lyapunov_diff[ :, find_nearest( F_arr, f ), find_nearest( W_arr, w ) ] );
     for i in range( X ):
         poincare_graphs[ i ].set_offsets( np.column_stack( (poincare_x[ :, i, find_nearest( F_arr, f ), find_nearest( W_arr, w ) ], poincare_y[ :, i, find_nearest( F_arr, f ), find_nearest( W_arr, w ) ]) ) );
     fig.canvas.draw_idle();
+    
+t = 0;
+dt_irl = 100.0 / 1000;
+def Animate( frame ):
+    global t;
+    f = f_slider.val;
+    w = w_slider.val;
+    phase_space_graphs[ 0 ].set_offsets( np.column_stack( (angles[ frame, :, find_nearest( F_arr, f ), find_nearest( W_arr, w ) ], angular_velocities[ frame, :, find_nearest( F_arr, f ), find_nearest( W_arr, w ) ]) ) );
+    text.set_text( f"t: {t:.1f}" );
+    t += dt;
+    if t > N * dt: t = 0;
+    arr = phase_space_graphs;
+    arr.append( text );
+    return arr;
+
+ani = animation.FuncAnimation( fig, Animate, frames=N, interval=dt_irl * 1000, blit=True );
 
 f_slider.on_changed(update);
 w_slider.on_changed(update);
 
-    
-#plot_multiple_lines( np.linspace( 0, N * dt, N ), angles, f"pendulum plot for R={R}, b={b}, M={M}, F={F}, w={w}" );
 plt.show();
