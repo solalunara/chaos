@@ -72,10 +72,10 @@ def plot_multiple_datasets( xdata: np.ndarray, ydata: np.ndarray, ax: plt.Axes, 
     if xlabel: ax.set_xlabel( xlabel );
     if ylabel: ax.set_ylabel( ylabel );
     
-    if xmin: ax.set_xlim( left=xmin );
-    if xmax: ax.set_xlim( right=xmax );
-    if ymin: ax.set_ylim( bottom=ymin );
-    if ymax: ax.set_ylim( top=ymax );
+    if xmin is not None: ax.set_xlim( xmin=xmin );
+    if xmax is not None: ax.set_xlim( xmax=xmax );
+    if ymin is not None: ax.set_ylim( ymin=ymin );
+    if ymax is not None: ax.set_ylim( ymax=ymax );
     
     return graphs;
     
@@ -124,13 +124,12 @@ for i in range( 1, N ):
     k_3 = Acceleration( time[ i - 1 ] + dt/2, angles[ i - 1 ] + k_2 * dt/2, angular_velocities[ i - 1 ] + k_2 * dt/2, F_arr, W_arr );
     k_4 = Acceleration( time[ i - 1 ] + dt, angles[ i - 1 ] + k_3 * dt, angular_velocities[ i - 1 ] + k_3 * dt, F_arr, W_arr );
     angular_velocities[ i ] = angular_velocities[ i - 1 ] + ( k_1 + 2*k_2 + 2*k_3 + k_4 ) * dt/6;
-    angles[ i ] = angles[ i - 1 ] + angular_velocities[ i ] * dt;
+    angles[ i ] = ( angles[ i - 1 ] + angular_velocities[ i ] * dt + np.pi ) % ( 2 * np.pi ) - np.pi;
 
-lyapunov_diff = np.abs( np.diff( angles, axis=1 ) );
+lyapunov_diff = np.average( np.abs( np.diff( angles, axis=1 ) ), axis=1 );
 
 poincare_x = angles[ :-1:, :, :, : ];
 poincare_y = angles[  1::, :, :, : ];
-poincare_diff = np.zeros( (2,N-1,X,F,W) );
 
 fig = plt.figure();
 gs = fig.add_gridspec(2, 3,  width_ratios=(1, 1, 10), height_ratios=(1, 1),
@@ -141,9 +140,9 @@ ax_scatter = fig.add_subplot( gs[1, 2] );
 ax_force = fig.add_subplot( gs[:, 0] );
 ax_freq = fig.add_subplot( gs[:, 1] );
 
-lines = plot_multiple_datasets( time, lyapunov_diff[ :, :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], ax_lines, ax_lines.plot, title=f"difference plot for R={R}, b={b}, M={M}", xlabel='time', ylabel='difference', xmin=0, xmax=N*dt, ymin=0, ymax=100 );
+lines = plot_multiple_datasets( time, lyapunov_diff[ :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], ax_lines, ax_lines.plot, title=f"difference plot for R={R}, b={b}, M={M}", xlabel='time', ylabel='difference', xmin=0, xmax=N*dt, ymin=0, ymax=2*np.pi );
 
-poincare_graphs = plot_multiple_datasets( poincare_x[ :, :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], poincare_y[ :, :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], ax_scatter, ax_scatter.scatter, title=f"poincare plot for R={R}, b={b}, M={M}", xlabel='x', ylabel='y', xmin=-np.pi, xmax=np.pi, ymin=-np.pi, ymax=np.pi);
+poincare_graphs = plot_multiple_datasets( poincare_x[ :, :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], poincare_y[ :, :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], ax_scatter, ax_scatter.scatter, title=f"poincare plot for R={R}, b={b}, M={M}", xlabel='x', ylabel='y', xmin=-np.pi, xmax=np.pi, ymin=-np.pi, ymax=np.pi );
 
 f_slider = Slider(
     ax=ax_force,
@@ -166,8 +165,7 @@ w_slider = Slider(
 def update(val):
     f = f_slider.val;
     w = w_slider.val;
-    for i in range( X - 1 ):
-        lines[ i ].set_ydata( lyapunov_diff[ :, i, find_nearest( F_arr, f ), find_nearest( W_arr, w ) ] );
+    lines[ 0 ].set_ydata( lyapunov_diff[ :, find_nearest( F_arr, f ), find_nearest( W_arr, w ) ] );
     for i in range( X ):
         poincare_graphs[ i ].set_offsets( np.column_stack( (poincare_x[ :, i, find_nearest( F_arr, f ), find_nearest( W_arr, w ) ], poincare_y[ :, i, find_nearest( F_arr, f ), find_nearest( W_arr, w ) ]) ) );
     fig.canvas.draw_idle();
