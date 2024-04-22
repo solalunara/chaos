@@ -9,8 +9,8 @@ def plot_multiple_datasets( xdata: np.ndarray, ydata: np.ndarray, ax: plt.Axes, 
     """graphs multiple datasets on the same plot
 
     Args:
-        xdata (array, dim 1 or 2): EITHER a 1D array of x values for all graphs, OR a 2D array of x values for each graph (Point Index, Graph Index)
-        ydata (array, dim 1 or 2): EITHER a 1D array of y values for all graphs, OR a 2D array of y values for each graph (Point Index, Graph Index)
+        xdata (array, dim 1 or 2): EITHER a 1D array of x values for all graphs, OR a 2D array of x values for each graph (Point Index, Graph Index), OR a list of numpy arrays of x values for each graph (for non-rectangular data sets)
+        ydata (array, dim 1 or 2): EITHER a 1D array of y values for all graphs, OR a 2D array of y values for each graph (Point Index, Graph Index), OR a list of numpy arrays of y values for each graph (for non-rectangular data sets)
         ax (plt.Axes): axis to plot the graphs on
         plotfn (Callable): function to plot the data with (e.g. ax.plot, ax.scatter, etc.)
         
