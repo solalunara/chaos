@@ -22,7 +22,7 @@ def plot_multiple_datasets( xdata: np.ndarray, ydata: np.ndarray, ax: plt.Axes, 
         xmax (float): maximum value of x axis
         ymin (float): minimum value of y axis
         ymax (float): maximum value of y axis
-        s (float): size of the points on a scatter graph
+        params (dict): dictionary of parameters to pass to the plot function
 
     Raises:
         ValueError: if x or y data has the wrong dimension
@@ -38,9 +38,8 @@ def plot_multiple_datasets( xdata: np.ndarray, ydata: np.ndarray, ax: plt.Axes, 
     xmax = kwargs.get( 'xmax', None );
     ymin = kwargs.get( 'ymin', None );
     ymax = kwargs.get( 'ymax', None );
-    s = kwargs.get( 's', None );
+    params = kwargs.get( 'params', {} );
     
-    graphs = [];
     
     rectangular = True;
     try:
@@ -57,31 +56,33 @@ def plot_multiple_datasets( xdata: np.ndarray, ydata: np.ndarray, ax: plt.Axes, 
             if len( ydata[ 0 ] ) == 1:
                 ydata = np.repeat( ydata, len( xdata ), axis=1 );
             elif len( xdata[ 0 ] ) == 1:
-                xdata = np.repeat( xdata, len( ydata ), axis=1 );
+                xdata = np.repeat( xdata, len( ydata[ 0 ] ), axis=1 );
+            else: raise ValueError( "xdata and ydata must have the same length" );
+            
+        if xdata.shape[ 0 ] != ydata.shape[ 0 ]: 
+            if ydata.shape[ 0 ] % xdata.shape[ 0 ] == 0:
+                xdata = np.repeat( xdata, len( ydata ) / len( xdata ), axis=0 );
+            elif xdata.shape[ 0 ] % ydata.shape[ 0 ] == 0:
+                ydata = np.repeat( ydata, len( xdata ) / len( ydata ), axis=0 );
             else: raise ValueError( "xdata and ydata must have the same length" );
             
     except AttributeError:
         #handle the case where xdata and ydata are a list of arrays
         rectangular = False;
         if len( xdata ) != len( ydata ): raise ValueError( "xdata and ydata must have the same length" );
+     
          
-    unpackable = True;
-    data_length = len( ydata[ 0 ] ) if rectangular else len( ydata );   
+    data_length = len( ydata[ 0 ] ) if rectangular else len( ydata );
+    graphs = [ None for i in range( data_length ) ];
     for i in range( data_length ):
-        graphs.append( None );
-        collection = None;
-        if s is not None:
-            collection = plotfn( xdata[ :, i ], ydata[ :, i ], s=s ) if rectangular else plotfn( xdata[ i ], ydata[ i ], s=s );
-        else:
-            collection = plotfn( xdata[ :, i ], ydata[ :, i ] ) if rectangular else plotfn( xdata[ i ], ydata[ i ] );
-        if unpackable:
-            try:
-                graphs[ i ], = collection;
-            except TypeError:
-                unpackable = False;
-                graphs[ i ] = collection;
-        else:
+        collection = plotfn( xdata[ :, i ], ydata[ :, i ], **params ) if rectangular else plotfn( xdata[ i ], ydata[ i ], **params );
+        try: #collection is a tuple of 1 element
+            graphs[ i ], = collection;
+        except TypeError: #not a collection
             graphs[ i ] = collection;
+        except ValueError: #more than one element
+            graphs[ i ] = collection[ -1 ];
+            
         
     
     if title: ax.set_title( title );
@@ -126,7 +127,7 @@ def poincare_recurrence( phase: np.ndarray, error: np.ndarray ):
                 lines_x.append( phase[ 0, :phase_point+1:, phase_plot ] );
                 lines_y.append( phase[ 1, :phase_point+1:, phase_plot ] );
                 break;
-    if len( lines_x ) == 0: raise ValueError( "no recurrence found" );
+    if len( lines_x ) == 0: print( "WARNING - no recurrence found" );
     return lines_x, lines_y;
     
 def find_nearest( array, value ):
@@ -134,19 +135,20 @@ def find_nearest( array, value ):
     idx = (np.abs( array - value )).argmin();
     return idx;
 
-N = 10000; # number of time steps
-dt = 0.03; # time step
+t_f = 100;          # final time
+dt = 0.003;           # time step
+N = int( t_f / dt ); # number of time steps
 A = 3;    # number of initial angles
 B = 3;    # number of initial angular velocities
 X = A*B;  # number of pendulums to simulate
-F = 10;   # number of forces to simulate, also acts as the number of frames in the animation
+F = 100;   # number of forces to simulate, also acts as the number of frames in the animation
 W = 10;   # number of angular velocities to simulate
 fmin = 0;
 fmax = 3;
 wmin = 0;
 wmax = 3;
-initial_angles = np.linspace( -0.001, 0.001, A ) + 0.5;
-initial_angular_velocities = np.linspace( -0.001, 0.001, B );
+initial_angles = np.linspace( -0.1, 0.1, A ) + 0.5;
+initial_angular_velocities = np.linspace( -0.1, 0.1, B );
 
 initial_angles_mesh = np.repeat( initial_angles, B );
 initial_angular_velocities_mesh = np.resize( initial_angular_velocities, X )
@@ -217,7 +219,7 @@ error_phase[ 1 ] = angular_velocities_error;
 poincare_recurrence_lines_x, poincare_recurrence_lines_y = poincare_recurrence( phase[ :, :, :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], error_phase[ :, :, :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ] );
 
 fig = plt.figure( figsize=(12, 8) );
-gs = fig.add_gridspec(4, 5,  width_ratios=(1, 1, 10, 10, 10), height_ratios=(1, 1, 1, 1),
+gs = fig.add_gridspec(4, 6,  width_ratios=(1, 1, 10, 10, 10, 10), height_ratios=(1, 1, 1, 1),
                       left=0.05, right=0.95, bottom=0.05, top=0.95,
                       wspace=0.45, hspace=0.45)
 ax_lines = fig.add_subplot( gs[ :2, 2 ] );
@@ -230,14 +232,17 @@ ax_poincaremaps.append( fig.add_subplot( gs[ 0, 4 ] ) );
 ax_poincaremaps.append( fig.add_subplot( gs[ 1, 4 ] ) );
 ax_poincaremaps.append( fig.add_subplot( gs[ 2, 4 ] ) );
 ax_poincaremaps.append( fig.add_subplot( gs[ 3, 4 ] ) );
+ax_bifurcation = fig.add_subplot( gs[ :, 5 ] );
 
 lines = plot_multiple_datasets( time, angles_error[ :, :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], ax_lines, ax_lines.plot, title=f"error plot for R={R}, b={b}, M={M}", xlabel='time', ylabel='error (radians)', xmin=0, xmax=N*dt, ymin=0 );
-poincare_graphs = plot_multiple_datasets( poincare_x[ :, :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], poincare_y[ :, :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], ax_scatter, ax_scatter.scatter, title=f"poincare plot for R={R}, b={b}, M={M}", xlabel='x', ylabel='y', xmin=-np.pi, xmax=np.pi, ymin=-np.pi, ymax=np.pi, s=1 );
-phase_space_graphs = plot_multiple_datasets( angles[ find_nearest( time, T_init ), :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], angular_velocities[ find_nearest( time, T_init ), :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], ax_phase, ax_phase.scatter, title=f"phase space plot for R={R}, b={b}, M={M}", xlabel='angle', ylabel='angular velocity', xmin=-np.pi, xmax=np.pi, ymin=-8, ymax=8, s=1 );
+poincare_graphs = plot_multiple_datasets( poincare_x[ :, :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], poincare_y[ :, :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], ax_scatter, ax_scatter.scatter, title=f"poincare plot for R={R}, b={b}, M={M}", xlabel='x', ylabel='y', xmin=-np.pi, xmax=np.pi, ymin=-np.pi, ymax=np.pi, params={'s': 1} );
+phase_space_graphs = plot_multiple_datasets( angles[ find_nearest( time, T_init ), :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], angular_velocities[ find_nearest( time, T_init ), :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], ax_phase, ax_phase.scatter, title=f"phase space plot for R={R}, b={b}, M={M}", xlabel='angle', ylabel='angular velocity', xmin=-np.pi, xmax=np.pi, ymin=-8, ymax=8, params={'s': 1} );
 poincare_maps = [];
-for i in range( len( ax_poincaremaps ) ):
-    poincare_maps.append( plot_multiple_datasets( poincare_recurrence_lines_x[ i ], poincare_recurrence_lines_y[ i ], ax_poincaremaps[ i ], ax_poincaremaps[ i ].scatter, title=f"poincare map for theta={angles[ 0, i, 0, 0 ]:.2f}, w_0={angular_velocities[ 0, i, 0, 0 ]:.2f}", xlabel='angle', ylabel='angular velocity', xmin=-np.pi, xmax=np.pi, ymin=-8, ymax=8, s=1 ) );
+for i in range( min( len( poincare_recurrence_lines_x ), len( ax_poincaremaps ) ) ):
+    poincare_maps.append( plot_multiple_datasets( poincare_recurrence_lines_x[ i ], poincare_recurrence_lines_y[ i ], ax_poincaremaps[ i ], ax_poincaremaps[ i ].scatter, title=f"poincare map for theta={angles[ 0, i, 0, 0 ]:.2f}, w_0={angular_velocities[ 0, i, 0, 0 ]:.2f}", xlabel='angle', ylabel='angular velocity', xmin=-np.pi, xmax=np.pi, ymin=-8, ymax=8, params={'s': 1} ) );
 text = ax_phase.text( 0, 3.5, f"t: {0}", fontsize=12 );
+bifurcation = plot_multiple_datasets( F_arr[ 0, :, 0 ], np.reshape( angles[ :, :, :, find_nearest( W_arr, 1 ) ], (N*X*F) ), ax_bifurcation, ax_bifurcation.hist2d, title=f"bifurcation plot for R={R}, b={b}, M={M}", xlabel='force amplitude', ylabel='angle', params={'bins': (F,500), 'cmap': plt.cm.jet, 'range': [[fmin,fmax],[-np.pi,np.pi]], 'norm': 'linear'} );
+plt.colorbar( bifurcation[ 0 ], ax=ax_bifurcation );
 
 f_slider = Slider(
     ax=ax_force,
@@ -257,8 +262,12 @@ w_slider = Slider(
     orientation="vertical"
 );
 
+t = 0;
+f = F_init;
+w = W_init;
+
 def update( val ):
-    global t;
+    global t, f, w;
     f = f_slider.val;
     w = w_slider.val;
     t = 0;
@@ -270,17 +279,17 @@ def update( val ):
         poincare_graphs[ i ].set_offsets( np.column_stack( (poincare_x[ :, i, find_nearest( F_arr, f ), find_nearest( W_arr, w ) ], poincare_y[ :, i, find_nearest( F_arr, f ), find_nearest( W_arr, w ) ]) ) );
     fig.canvas.draw_idle();
     
-t = 0;
 dt_irl = 100.0 / 1000;
 def Animate( frame ):
     global t;
-    f = f_slider.val;
-    w = w_slider.val;
-    phase_space_graphs[ 0 ].set_offsets( np.column_stack( (angles[ find_nearest( time, t ), :, find_nearest( F_arr, f ), find_nearest( W_arr, w ) ], angular_velocities[ find_nearest( time, t ), :, find_nearest( F_arr, f ), find_nearest( W_arr, w ) ]) ) );
+    f_nearest = find_nearest( F_arr, f );
+    w_nearest = find_nearest( W_arr, w );
+    t_nearest = find_nearest( time, t );
+    phase_space_graphs[ 0 ].set_offsets( np.column_stack( (angles[ t_nearest, :, f_nearest, w_nearest ], angular_velocities[ t_nearest, :, f_nearest, w_nearest ]) ) );
     text.set_text( f"t: {t:.1f}" );
     t += dt_irl;
     if t > N * dt: t = 0;
-    arr = phase_space_graphs;
+    arr = phase_space_graphs.copy();
     arr.append( text );
     return arr;
 
