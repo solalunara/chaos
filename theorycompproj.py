@@ -22,6 +22,8 @@ def plot_multiple_datasets( xdata: np.ndarray, ydata: np.ndarray, ax: plt.Axes, 
         xmax (float): maximum value of x axis
         ymin (float): minimum value of y axis
         ymax (float): maximum value of y axis
+        x_labelpad (float): padding for the x axis label
+        y_labelpad (float): padding for the y axis label
         params (dict): dictionary of parameters to pass to the plot function
 
     Raises:
@@ -38,6 +40,8 @@ def plot_multiple_datasets( xdata: np.ndarray, ydata: np.ndarray, ax: plt.Axes, 
     xmax = kwargs.get( 'xmax', None );
     ymin = kwargs.get( 'ymin', None );
     ymax = kwargs.get( 'ymax', None );
+    x_labelpad = kwargs.get( 'x_labelpad', None );
+    y_labelpad = kwargs.get( 'y_labelpad', None );
     params = kwargs.get( 'params', {} );
     
     
@@ -86,8 +90,8 @@ def plot_multiple_datasets( xdata: np.ndarray, ydata: np.ndarray, ax: plt.Axes, 
         
     
     if title: ax.set_title( title );
-    if xlabel: ax.set_xlabel( xlabel );
-    if ylabel: ax.set_ylabel( ylabel );
+    if xlabel: ax.set_xlabel( xlabel ) if not x_labelpad else ax.set_xlabel( xlabel, labelpad=x_labelpad );
+    if ylabel: ax.set_ylabel( ylabel ) if not y_labelpad else ax.set_ylabel( ylabel, labelpad=y_labelpad );
     
     #float value of zero is False, so we need to check if the value is None
     if xmin is not None: ax.set_xlim( xmin=xmin );
@@ -136,10 +140,10 @@ def find_nearest( array, value ):
     return idx;
 
 t_f = 100;          # final time
-dt = 0.003;           # time step
+dt = 0.03;           # time step
 N = int( t_f / dt ); # number of time steps
-A = 3;    # number of initial angles
-B = 3;    # number of initial angular velocities
+A = 5;    # number of initial angles
+B = 5;    # number of initial angular velocities
 X = A*B;  # number of pendulums to simulate
 F = 100;   # number of forces to simulate, also acts as the number of frames in the animation
 W = 10;   # number of angular velocities to simulate
@@ -147,8 +151,8 @@ fmin = 0;
 fmax = 3;
 wmin = 0;
 wmax = 3;
-initial_angles = np.linspace( -0.1, 0.1, A ) + 0.5;
-initial_angular_velocities = np.linspace( -0.1, 0.1, B );
+initial_angles = np.linspace( -1, 1, A ) + 0.5;
+initial_angular_velocities = np.linspace( -1, 1, B );
 
 initial_angles_mesh = np.repeat( initial_angles, B );
 initial_angular_velocities_mesh = np.resize( initial_angular_velocities, X )
@@ -220,8 +224,8 @@ poincare_recurrence_lines_x, poincare_recurrence_lines_y = poincare_recurrence( 
 
 fig = plt.figure( figsize=(12, 8) );
 gs = fig.add_gridspec(4, 6,  width_ratios=(1, 1, 10, 10, 10, 10), height_ratios=(1, 1, 1, 1),
-                      left=0.05, right=0.95, bottom=0.05, top=0.95,
-                      wspace=0.45, hspace=0.45)
+                      left=0.05, right=0.95, bottom=0.1, top=0.95,
+                      wspace=0.5, hspace=0.8)
 ax_lines = fig.add_subplot( gs[ :2, 2 ] );
 ax_scatter = fig.add_subplot( gs[ 2:, 2 ] );
 ax_force = fig.add_subplot( gs[ :, 0 ] );
@@ -234,19 +238,19 @@ ax_poincaremaps.append( fig.add_subplot( gs[ 2, 4 ] ) );
 ax_poincaremaps.append( fig.add_subplot( gs[ 3, 4 ] ) );
 ax_bifurcation = fig.add_subplot( gs[ :, 5 ] );
 
-lines = plot_multiple_datasets( time, angles_error[ :, :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], ax_lines, ax_lines.plot, title=f"error plot for R={R}, b={b}, M={M}", xlabel='time', ylabel='error (radians)', xmin=0, xmax=N*dt, ymin=0 );
-poincare_graphs = plot_multiple_datasets( poincare_x[ :, :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], poincare_y[ :, :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], ax_scatter, ax_scatter.scatter, title=f"poincare plot for R={R}, b={b}, M={M}", xlabel='x', ylabel='y', xmin=-np.pi, xmax=np.pi, ymin=-np.pi, ymax=np.pi, params={'s': 1} );
-phase_space_graphs = plot_multiple_datasets( angles[ find_nearest( time, T_init ), :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], angular_velocities[ find_nearest( time, T_init ), :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], ax_phase, ax_phase.scatter, title=f"phase space plot for R={R}, b={b}, M={M}", xlabel='angle', ylabel='angular velocity', xmin=-np.pi, xmax=np.pi, ymin=-8, ymax=8, params={'s': 1} );
+lines = plot_multiple_datasets( time, angles_error[ :, :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], ax_lines, ax_lines.plot, title=f"error plot", xlabel='time', ylabel='radians', xmin=0, xmax=N*dt, ymin=0, ymax=2*np.pi );
+poincare_graphs = plot_multiple_datasets( poincare_x[ :, :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], poincare_y[ :, :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], ax_scatter, ax_scatter.scatter, title=f"poincare plot", xlabel='$x_n$', ylabel='$x_{n+1}$', xmin=-np.pi, xmax=np.pi, ymin=-np.pi, ymax=np.pi, params={'s': 1} );
+phase_space_graphs = plot_multiple_datasets( angles[ find_nearest( time, T_init ), :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], angular_velocities[ find_nearest( time, T_init ), :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], ax_phase, ax_phase.scatter, title=f"phase space plot", xlabel='$\\theta$ rad', ylabel='$\\omega$ rad/s', y_labelpad=-5, xmin=-np.pi, xmax=np.pi, ymin=-8, ymax=8, params={'s': 1} );
 poincare_maps = [];
 for i in range( min( len( poincare_recurrence_lines_x ), len( ax_poincaremaps ) ) ):
-    poincare_maps.append( plot_multiple_datasets( poincare_recurrence_lines_x[ i ], poincare_recurrence_lines_y[ i ], ax_poincaremaps[ i ], ax_poincaremaps[ i ].scatter, title=f"poincare map for theta={angles[ 0, i, 0, 0 ]:.2f}, w_0={angular_velocities[ 0, i, 0, 0 ]:.2f}", xlabel='angle', ylabel='angular velocity', xmin=-np.pi, xmax=np.pi, ymin=-8, ymax=8, params={'s': 1} ) );
+    poincare_maps.append( plot_multiple_datasets( poincare_recurrence_lines_x[ i ], poincare_recurrence_lines_y[ i ], ax_poincaremaps[ i ], ax_poincaremaps[ i ].scatter, title=f"pcr. map $\\theta$={angles[ 0, i, 0, 0 ]:.3f}, $\\omega_0$={angular_velocities[ 0, i, 0, 0 ]:.3f}", xlabel='$\\theta$ rad', ylabel='$\\omega$ rad/s', y_labelpad=-5, xmin=-np.pi, xmax=np.pi, ymin=-8, ymax=8, params={'s': 1} ) );
 text = ax_phase.text( 0, 3.5, f"t: {0}", fontsize=12 );
-bifurcation = plot_multiple_datasets( F_arr[ 0, :, 0 ], np.reshape( angles[ :, :, :, find_nearest( W_arr, 1 ) ], (N*X*F) ), ax_bifurcation, ax_bifurcation.hist2d, title=f"bifurcation plot for R={R}, b={b}, M={M}", xlabel='force amplitude', ylabel='angle', params={'bins': (F,500), 'cmap': plt.cm.jet, 'range': [[fmin,fmax],[-np.pi,np.pi]], 'norm': 'linear'} );
+bifurcation = plot_multiple_datasets( F_arr[ 0, :, 0 ], np.reshape( angles[ :, :, :, find_nearest( W_arr, 1 ) ], (N*X*F) ), ax_bifurcation, ax_bifurcation.hist2d, title=f"bfn. plot", xlabel='force amplitude', ylabel='angle', y_labelpad=-5, params={'bins': (F,500), 'cmap': plt.cm.jet, 'range': [[fmin,fmax],[-np.pi,np.pi]], 'norm': 'log'} );
 plt.colorbar( bifurcation[ 0 ], ax=ax_bifurcation );
 
 f_slider = Slider(
     ax=ax_force,
-    label="force amplitude",
+    label="force ampl.",
     valmin=fmin,
     valmax=fmax,
     valinit=F_init,
