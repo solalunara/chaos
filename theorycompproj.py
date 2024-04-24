@@ -63,13 +63,6 @@ def plot_multiple_datasets( xdata: np.ndarray, ydata: np.ndarray, ax: plt.Axes, 
                 xdata = np.repeat( xdata, len( ydata[ 0 ] ), axis=1 );
             else: raise ValueError( "xdata and ydata must have the same length" );
             
-        if xdata.shape[ 0 ] != ydata.shape[ 0 ]: 
-            if ydata.shape[ 0 ] % xdata.shape[ 0 ] == 0:
-                xdata = np.repeat( xdata, len( ydata ) / len( xdata ), axis=0 );
-            elif xdata.shape[ 0 ] % ydata.shape[ 0 ] == 0:
-                ydata = np.repeat( ydata, len( xdata ) / len( ydata ), axis=0 );
-            else: raise ValueError( "xdata and ydata must have the same length" );
-            
     except AttributeError:
         #handle the case where xdata and ydata are a list of arrays
         rectangular = False;
@@ -131,7 +124,10 @@ def poincare_recurrence( phase: np.ndarray, error: np.ndarray ):
                 lines_x.append( phase[ 0, :phase_point+1:, phase_plot ] );
                 lines_y.append( phase[ 1, :phase_point+1:, phase_plot ] );
                 break;
-    if len( lines_x ) == 0: print( "WARNING - no recurrence found" );
+    if len( lines_x ) == 0: 
+        print( "WARNING - no recurrence found" );
+        lines_x.append( np.zeros( 1 ) );
+        lines_y.append( np.zeros( 1 ) );
     return lines_x, lines_y;
     
 def find_nearest( array, value ):
@@ -145,14 +141,14 @@ N = int( t_f / dt ); # number of time steps
 A = 5;    # number of initial angles
 B = 5;    # number of initial angular velocities
 X = A*B;  # number of pendulums to simulate
-F = 100;   # number of forces to simulate, also acts as the number of frames in the animation
-W = 10;   # number of angular velocities to simulate
+F = 30;   # number of forces to simulate
+W = 30;   # number of angular velocities to simulate
 fmin = 0;
 fmax = 3;
 wmin = 0;
 wmax = 3;
-initial_angles = np.linspace( -1, 1, A ) + 0.5;
-initial_angular_velocities = np.linspace( -1, 1, B );
+initial_angles = np.linspace( -2, 2, A );
+initial_angular_velocities = np.linspace( -2, 2, B );
 
 initial_angles_mesh = np.repeat( initial_angles, B );
 initial_angular_velocities_mesh = np.resize( initial_angular_velocities, X )
@@ -164,7 +160,7 @@ b = 0.1;
 M = 1;
 F_arr = np.reshape( np.linspace( fmin, fmax, F ), (1,F,1) );
 W_arr = np.reshape( np.linspace( wmin, wmax, W ), (1,1,W) );
-F_init = 0.5;
+F_init = 1.0;
 W_init = 0.5;
 T_init = 0;
 
@@ -222,8 +218,8 @@ error_phase[ 1 ] = angular_velocities_error;
 
 poincare_recurrence_lines_x, poincare_recurrence_lines_y = poincare_recurrence( phase[ :, :, :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], error_phase[ :, :, :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ] );
 
-fig = plt.figure( figsize=(12, 8) );
-gs = fig.add_gridspec(4, 6,  width_ratios=(1, 1, 10, 10, 10, 10), height_ratios=(1, 1, 1, 1),
+fig = plt.figure( figsize=(14, 8) );
+gs = fig.add_gridspec(4, 7,  width_ratios=(1, 1, 10, 10, 10, 10, 10), height_ratios=(1, 1, 1, 1),
                       left=0.05, right=0.95, bottom=0.1, top=0.95,
                       wspace=0.5, hspace=0.8)
 ax_lines = fig.add_subplot( gs[ :2, 2 ] );
@@ -236,17 +232,24 @@ ax_poincaremaps.append( fig.add_subplot( gs[ 0, 4 ] ) );
 ax_poincaremaps.append( fig.add_subplot( gs[ 1, 4 ] ) );
 ax_poincaremaps.append( fig.add_subplot( gs[ 2, 4 ] ) );
 ax_poincaremaps.append( fig.add_subplot( gs[ 3, 4 ] ) );
-ax_bifurcation = fig.add_subplot( gs[ :, 5 ] );
+ax_bifurcation_pos = fig.add_subplot( gs[ :, 5 ] );
+ax_bifurcation_vel = fig.add_subplot( gs[ :, 6 ] );
 
 lines = plot_multiple_datasets( time, angles_error[ :, :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], ax_lines, ax_lines.plot, title=f"error plot", xlabel='time', ylabel='radians', xmin=0, xmax=N*dt, ymin=0, ymax=2*np.pi );
 poincare_graphs = plot_multiple_datasets( poincare_x[ :, :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], poincare_y[ :, :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], ax_scatter, ax_scatter.scatter, title=f"poincare plot", xlabel='$x_n$', ylabel='$x_{n+1}$', xmin=-np.pi, xmax=np.pi, ymin=-np.pi, ymax=np.pi, params={'s': 1} );
 phase_space_graphs = plot_multiple_datasets( angles[ find_nearest( time, T_init ), :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], angular_velocities[ find_nearest( time, T_init ), :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], ax_phase, ax_phase.scatter, title=f"phase space plot", xlabel='$\\theta$ rad', ylabel='$\\omega$ rad/s', y_labelpad=-5, xmin=-np.pi, xmax=np.pi, ymin=-8, ymax=8, params={'s': 1} );
 poincare_maps = [];
-for i in range( min( len( poincare_recurrence_lines_x ), len( ax_poincaremaps ) ) ):
-    poincare_maps.append( plot_multiple_datasets( poincare_recurrence_lines_x[ i ], poincare_recurrence_lines_y[ i ], ax_poincaremaps[ i ], ax_poincaremaps[ i ].scatter, title=f"pcr. map $\\theta$={angles[ 0, i, 0, 0 ]:.3f}, $\\omega_0$={angular_velocities[ 0, i, 0, 0 ]:.3f}", xlabel='$\\theta$ rad', ylabel='$\\omega$ rad/s', y_labelpad=-5, xmin=-np.pi, xmax=np.pi, ymin=-8, ymax=8, params={'s': 1} ) );
+for i in range( len( ax_poincaremaps ) ):
+    poincare_maps.append( plot_multiple_datasets( poincare_recurrence_lines_x[ i ], poincare_recurrence_lines_y[ i ], ax_poincaremaps[ i ], ax_poincaremaps[ i ].scatter, title=f"$\\theta_0$={angles[ 0, i, 0, 0 ]:.1f}, $\\omega_0$={angular_velocities[ 0, i, 0, 0 ]:.1f}", xlabel='$\\theta$ rad', ylabel='$\\omega$ rad/s', y_labelpad=-5, xmin=-np.pi, xmax=np.pi, ymin=-8, ymax=8, params={'s': 1} ) );
 text = ax_phase.text( 0, 3.5, f"t: {0}", fontsize=12 );
-bifurcation = plot_multiple_datasets( F_arr[ 0, :, 0 ], np.reshape( angles[ :, :, :, find_nearest( W_arr, 1 ) ], (N*X*F) ), ax_bifurcation, ax_bifurcation.hist2d, title=f"bfn. plot", xlabel='force amplitude', ylabel='angle', y_labelpad=-5, params={'bins': (F,500), 'cmap': plt.cm.jet, 'range': [[fmin,fmax],[-np.pi,np.pi]], 'norm': 'log'} );
-plt.colorbar( bifurcation[ 0 ], ax=ax_bifurcation );
+
+bfn_data_vel = angular_velocities[ :, :, :, find_nearest( W_arr, W_init ) ].flatten();
+bfn_data_pos = angles[ :, :, :, find_nearest( W_arr, W_init ) ].flatten();
+bfn_data_x = np.tile( F_arr.flatten(), len(bfn_data_pos)//len(F_arr.flatten()) ); #force in 3rd dimension, repeats in tile
+bfn_params = {'bins': (F,100), 'cmap': plt.cm.jet, 'range': [[fmin,fmax],[-np.pi*1.5,np.pi*1.5]], 'norm': 'log'};
+
+plot_multiple_datasets( bfn_data_x, bfn_data_pos, ax_bifurcation_pos, ax_bifurcation_pos.hist2d, title=f"$\\theta$ bfn. $\\Omega_d={W_init:.1f}$", xlabel='force amplitude', ylabel='$\\theta$ rad', y_labelpad=-5, params=bfn_params );
+plot_multiple_datasets( bfn_data_x, bfn_data_vel, ax_bifurcation_vel, ax_bifurcation_vel.hist2d, title=f"$\\omega$ bfn. $\\Omega_d={W_init:.1f}$", xlabel='force amplitude', ylabel='$\\omega$ rad/s', y_labelpad=-5, params=bfn_params );
 
 f_slider = Slider(
     ax=ax_force,
@@ -276,9 +279,22 @@ def update( val ):
     w = w_slider.val;
     t = 0;
     [ lines[ i ].set_ydata( angles_error[ :, i, find_nearest( F_arr, f ), find_nearest( W_arr, w ) ] ) for i in range( len( lines ) ) ];
+    
+    ax_bifurcation_pos.cla();
+    ax_bifurcation_vel.cla();
+    bfn_data_vel = angular_velocities[ :, :, :, find_nearest( W_arr, w ) ].flatten();
+    bfn_data_pos = angles[ :, :, :, find_nearest( W_arr, w ) ].flatten();
+    bfn_data_x = np.tile( F_arr.flatten(), len(bfn_data_pos)//len(F_arr.flatten()) ); #force in 3rd dimension, repeats in tile
+
+    plot_multiple_datasets( bfn_data_x, bfn_data_pos, ax_bifurcation_pos, ax_bifurcation_pos.hist2d, title=f"$\\theta$ bfn. $\\Omega_d={w:.1f}$", xlabel='force amplitude', ylabel='$\\theta$ rad', y_labelpad=-5, params=bfn_params );
+    plot_multiple_datasets( bfn_data_x, bfn_data_vel, ax_bifurcation_vel, ax_bifurcation_vel.hist2d, title=f"$\\omega$ bfn. $\\Omega_d={w:.1f}$", xlabel='force amplitude', ylabel='$\\omega$ rad/s', y_labelpad=-5, params=bfn_params );
+    
     poincare_recurrence_lines_x, poincare_recurrence_lines_y = poincare_recurrence( phase[ :, :, :, find_nearest( F_arr, f ), find_nearest( W_arr, w ) ], error_phase[ :, :, :, find_nearest( F_arr, f ), find_nearest( W_arr, w ) ] );
     for i in range( len( poincare_maps ) ):
-        poincare_maps[ i ][ 0 ].set_offsets( np.column_stack( (poincare_recurrence_lines_x[ i ], poincare_recurrence_lines_y[ i ]) ) );
+        if i < len( poincare_recurrence_lines_x ):
+            poincare_maps[ i ][ 0 ].set_offsets( np.column_stack( (poincare_recurrence_lines_x[ i ], poincare_recurrence_lines_y[ i ]) ) );
+        else:
+            poincare_maps[ i ][ 0 ].set_offsets( np.column_stack( (np.zeros( 1 ), np.zeros( 1 )) ) );
     for i in range( X ):
         poincare_graphs[ i ].set_offsets( np.column_stack( (poincare_x[ :, i, find_nearest( F_arr, f ), find_nearest( W_arr, w ) ], poincare_y[ :, i, find_nearest( F_arr, f ), find_nearest( W_arr, w ) ]) ) );
     fig.canvas.draw_idle();
