@@ -240,7 +240,7 @@ poincare_graphs = plot_multiple_datasets( poincare_x[ :, :, find_nearest( F_arr,
 phase_space_graphs = plot_multiple_datasets( angles[ find_nearest( time, T_init ), :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], angular_velocities[ find_nearest( time, T_init ), :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], ax_phase, ax_phase.scatter, title=f"phase space plot", xlabel='$\\theta$ rad', ylabel='$\\omega$ rad/s', y_labelpad=-5, xmin=-np.pi, xmax=np.pi, ymin=-8, ymax=8, params={'s': 1} );
 poincare_maps = [];
 for i in range( len( ax_poincaremaps ) ):
-    poincare_maps.append( plot_multiple_datasets( poincare_recurrence_lines_x[ i ], poincare_recurrence_lines_y[ i ], ax_poincaremaps[ i ], ax_poincaremaps[ i ].scatter, title=f"$\\theta_0$={angles[ 0, i, 0, 0 ]:.1f}, $\\omega_0$={angular_velocities[ 0, i, 0, 0 ]:.1f}", xlabel='$\\theta$ rad', ylabel='$\\omega$ rad/s', y_labelpad=-5, xmin=-np.pi, xmax=np.pi, ymin=-8, ymax=8, params={'s': 1} ) );
+    poincare_maps.append( plot_multiple_datasets( poincare_recurrence_lines_x[ i ], poincare_recurrence_lines_y[ i ], ax_poincaremaps[ i ], ax_poincaremaps[ i ].scatter, title=f"poincare map", xlabel='$\\theta$ rad', ylabel='$\\omega$ rad/s', y_labelpad=-5, xmin=-np.pi, xmax=np.pi, ymin=-8, ymax=8, params={'s': 1} ) );
 text = ax_phase.text( 0, 3.5, f"t: {0}", fontsize=12 );
 
 bfn_data_vel = angular_velocities[ :, :, :, find_nearest( W_arr, W_init ) ].flatten();
