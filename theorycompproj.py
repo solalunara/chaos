@@ -147,8 +147,8 @@ fmin = 0;
 fmax = 3;
 wmin = 0;
 wmax = 3;
-initial_angles = np.linspace( -2, 2, A );
-initial_angular_velocities = np.linspace( -2, 2, B );
+initial_angles = np.linspace( -.02, .02, A ) + 0.5;
+initial_angular_velocities = np.linspace( -.02, .02, B );
 
 initial_angles_mesh = np.repeat( initial_angles, B );
 initial_angular_velocities_mesh = np.resize( initial_angular_velocities, X )
@@ -202,9 +202,9 @@ for i in range( 1, N ):
     angular_velocities_error[ i ] = np.sqrt( ( np.abs( doublestep_estimation_0_rk4 - doublestep_estimation_1_rk4 ) / 15 )**2 + rk4_err**2 + angular_velocities_error[ i - 1 ]**2 );
     angles_error[ i ] = np.sqrt( ( np.abs( doublestep_estimation_0_euler - doublestep_estimation_1_euler ) )**2 + angles_error[ i - 1 ]**2 + dt**2 * angular_velocities_error[ i - 1 ]**2 );
     
-angles = np.mod( angles + np.pi, 2 * np.pi ) - np.pi;
 
-lyapunov_diff = np.average( np.abs( np.diff( angles, axis=1 ) ), axis=1 );
+lyapunov_diff = np.sqrt( ( np.diff( angles, axis=1 ) )**2 + ( np.diff( angular_velocities, axis=1 ) )**2 );
+angles = np.mod( angles + np.pi, 2 * np.pi ) - np.pi;
 
 poincare_x = angles[ :-1:, :, :, : ];
 poincare_y = angles[  1::, :, :, : ];
@@ -222,7 +222,8 @@ fig = plt.figure( figsize=(14, 8) );
 gs = fig.add_gridspec(4, 7,  width_ratios=(1, 1, 10, 10, 10, 10, 10), height_ratios=(1, 1, 1, 1),
                       left=0.05, right=0.95, bottom=0.1, top=0.95,
                       wspace=0.5, hspace=0.8)
-ax_lines = fig.add_subplot( gs[ :2, 2 ] );
+ax_error = fig.add_subplot( gs[ 0, 2 ] );
+ax_lyap = fig.add_subplot( gs[ 1, 2 ] );
 ax_scatter = fig.add_subplot( gs[ 2:, 2 ] );
 ax_force = fig.add_subplot( gs[ :, 0 ] );
 ax_freq = fig.add_subplot( gs[ :, 1 ] );
@@ -235,7 +236,8 @@ ax_poincaremaps.append( fig.add_subplot( gs[ 3, 4 ] ) );
 ax_bifurcation_pos = fig.add_subplot( gs[ :, 5 ] );
 ax_bifurcation_vel = fig.add_subplot( gs[ :, 6 ] );
 
-lines = plot_multiple_datasets( time, angles_error[ :, :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], ax_lines, ax_lines.plot, title=f"error plot", xlabel='time', ylabel='radians', xmin=0, xmax=N*dt, ymin=0, ymax=2*np.pi );
+errors = plot_multiple_datasets( time, angles_error[ :, :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], ax_error, ax_error.plot, title=f"error plot", xlabel='time', ylabel='radians', xmin=0, xmax=N*dt, ymin=0, ymax=2*np.pi );
+lyapunov = plot_multiple_datasets( time, lyapunov_diff[ :, :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], ax_lyap, ax_lyap.plot, title=f"lyapunov diff", xlabel='time', ylabel='radians', xmin=0, xmax=N*dt, ymin=0 );
 poincare_graphs = plot_multiple_datasets( poincare_x[ :, :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], poincare_y[ :, :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], ax_scatter, ax_scatter.scatter, title=f"poincare plot", xlabel='$x_n$', ylabel='$x_{n+1}$', xmin=-np.pi, xmax=np.pi, ymin=-np.pi, ymax=np.pi, params={'s': 1} );
 phase_space_graphs = plot_multiple_datasets( angles[ find_nearest( time, T_init ), :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], angular_velocities[ find_nearest( time, T_init ), :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], ax_phase, ax_phase.scatter, title=f"phase space plot", xlabel='$\\theta$ rad', ylabel='$\\omega$ rad/s', y_labelpad=-5, xmin=-np.pi, xmax=np.pi, ymin=-8, ymax=8, params={'s': 1} );
 poincare_maps = [];
@@ -278,7 +280,8 @@ def update( val ):
     f = f_slider.val;
     w = w_slider.val;
     t = 0;
-    [ lines[ i ].set_ydata( angles_error[ :, i, find_nearest( F_arr, f ), find_nearest( W_arr, w ) ] ) for i in range( len( lines ) ) ];
+    [ errors[ i ].set_ydata( angles_error[ :, i, find_nearest( F_arr, f ), find_nearest( W_arr, w ) ] ) for i in range( len( errors ) ) ];
+    [ lyapunov[ i ].set_ydata( lyapunov_diff[ :, i, find_nearest( F_arr, f ), find_nearest( W_arr, w ) ] ) for i in range( len( lyapunov ) ) ];
     
     ax_bifurcation_pos.cla();
     ax_bifurcation_vel.cla();
@@ -313,7 +316,7 @@ def Animate( frame ):
     arr.append( text );
     return arr;
 
-ani = animation.FuncAnimation( fig, Animate, frames=N, interval=dt_irl * 1000, blit=True );
+ani = animation.FuncAnimation( fig, Animate, frames=int(t_f / dt_irl), interval=dt_irl * 1000, blit=True );
 
 f_slider.on_changed(update);
 w_slider.on_changed(update);
