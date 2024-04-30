@@ -238,7 +238,7 @@ ax_bifurcation_vel = fig.add_subplot( gs[ :, 6 ] );
 
 errors = plot_multiple_datasets( time, angles_error[ :, :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], ax_error, ax_error.plot, title=f"error plot", xlabel='time', ylabel='radians', xmin=0, xmax=N*dt, ymin=0, ymax=2*np.pi );
 lyapunov = plot_multiple_datasets( time, lyapunov_diff[ :, :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], ax_lyap, ax_lyap.plot, title=f"lyapunov diff", xlabel='time', ylabel='radians', xmin=0, xmax=N*dt, ymin=0 );
-poincare_graphs = plot_multiple_datasets( poincare_x[ :, :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], poincare_y[ :, :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], ax_scatter, ax_scatter.scatter, title=f"poincare plot", xlabel='$x_n$', ylabel='$x_{n+1}$', xmin=-np.pi, xmax=np.pi, ymin=-np.pi, ymax=np.pi, params={'s': 1} );
+poincare_graphs = plot_multiple_datasets( poincare_x[ :, :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], poincare_y[ :, :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], ax_scatter, ax_scatter.scatter, title=f"pcr plot $F={F_init:.1f}$ $\\Omega_d={W_init:.1f}$", xlabel='$x_n$', ylabel='$x_{n+1}$', xmin=-np.pi, xmax=np.pi, ymin=-np.pi, ymax=np.pi, params={'s': 1} );
 phase_space_graphs = plot_multiple_datasets( angles[ find_nearest( time, T_init ), :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], angular_velocities[ find_nearest( time, T_init ), :, find_nearest( F_arr, F_init ), find_nearest( W_arr, W_init ) ], ax_phase, ax_phase.scatter, title=f"phase space plot", xlabel='$\\theta$ rad', ylabel='$\\omega$ rad/s', y_labelpad=-5, xmin=-np.pi, xmax=np.pi, ymin=-8, ymax=8, params={'s': 1} );
 poincare_maps = [];
 for i in range( len( ax_poincaremaps ) ):
@@ -300,6 +300,7 @@ def update( val ):
             poincare_maps[ i ][ 0 ].set_offsets( np.column_stack( (np.zeros( 1 ), np.zeros( 1 )) ) );
     for i in range( X ):
         poincare_graphs[ i ].set_offsets( np.column_stack( (poincare_x[ :, i, find_nearest( F_arr, f ), find_nearest( W_arr, w ) ], poincare_y[ :, i, find_nearest( F_arr, f ), find_nearest( W_arr, w ) ]) ) );
+    ax_scatter.title.set_text( f"pcr plot $F={f:.1f}$ $\\Omega_d={w:.1f}$" );
     fig.canvas.draw_idle();
     
 dt_irl = 100.0 / 1000;
