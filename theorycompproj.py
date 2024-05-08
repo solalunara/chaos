@@ -4,6 +4,10 @@ from matplotlib.widgets import Button, Slider;
 from typing import Callable;
 import matplotlib.animation as animation;
 
+# 0 - points spanning the phase space of the system
+# 1 - points very close together
+MODE = 0;
+
 
 def plot_multiple_datasets( xdata: np.ndarray, ydata: np.ndarray, ax: plt.Axes, plotfn: Callable, **kwargs ):
     """graphs multiple datasets on the same plot
@@ -126,8 +130,10 @@ def poincare_recurrence( phase: np.ndarray, error: np.ndarray ):
                 break;
     if len( lines_x ) == 0: 
         print( "WARNING - no recurrence found" );
-        lines_x.append( np.zeros( 1 ) );
-        lines_y.append( np.zeros( 1 ) );
+    if len( lines_x ) < 4:
+        for i in range( 4 - len( lines_x ) ):
+            lines_x.append( np.zeros( 1 ) );
+            lines_y.append( np.zeros( 1 ) );
     return lines_x, lines_y;
     
 def find_nearest( array, value ):
@@ -147,8 +153,8 @@ fmin = 0;
 fmax = 3;
 wmin = 0;
 wmax = 3;
-initial_angles = np.linspace( -.02, .02, A ) + 0.5;
-initial_angular_velocities = np.linspace( -.02, .02, B );
+initial_angles = np.linspace( -1, 1, A ) if MODE == 0 else np.linspace( -1e-3, 1e-3, A ) + 0.5;
+initial_angular_velocities = np.linspace( -1, 1, B ) if MODE == 0 else np.linspace( -1e-3, 1e-3, B );
 
 initial_angles_mesh = np.repeat( initial_angles, B );
 initial_angular_velocities_mesh = np.resize( initial_angular_velocities, X )
